@@ -22,7 +22,7 @@ MAX_Y = 1024
 class WorkingMeas():
   def __init__(self):
     self.noworktime=30 # after 30 secs, its no work.
-    self.pihenotime=2
+    self.pihenotime=25*60
     self.worksession=0
     self.pihenosession=0
     self.allworkcounter=0
