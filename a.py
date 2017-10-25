@@ -11,7 +11,7 @@ the busy-loop that starts a new process for every pointer query.
 from ctypes import cdll, c_int, c_voidp, byref
 import time
 import ctypes as ct
-
+import os
 
 xlib = cdll.LoadLibrary('libX11.so')
 
@@ -19,13 +19,56 @@ xlib = cdll.LoadLibrary('libX11.so')
 MAX_X = 1280
 MAX_Y = 1024
 
+class WorkingMeas():
+  def __init__(self):
+    self.noworktime=30 # after 30 secs, its no work.
+    self.pihenotime=2
+    self.worksession=0
+    self.pihenosession=0
+    self.allworkcounter=0
+    self.allpihenocounter=0
+    self.work=True
+    self.lastactivity=time.time()
+    self.dialogsent=False
+    
+  def message(self,activity):
+    t=time.time()
+    if activity:
+      if (self.work):
+        self.allworkcounter+=t-self.lastactivity
+        self.worksession+=t-self.lastactivity
+      self.work=True
+      self.pienosession=0
+      self.lastactivity=t
+    else:
+      if self.work:
+        if (self.lastactivity+self.noworktime<t):
+          self.allpihenocounter+=t-self.lastactivity
+          self.pihenosession+=t-self.lastactivity
+          self.worksession=0
+          self.work=False
+          self.dialogsent=False
+      else:
+        self.allpihenocounter+=t-self.lastactivity
+        self.lastactivity=t
+    print(self.worksession,self.pihenosession,t-self.lastactivity)
+    if (self.pihenotime<self.worksession):
+      print("pihenjééé")
+      if (not self.dialogsent):
+        os.system("zenity --info --text='pihenjé'&")
+        self.dialogsent=True
+    
+    
+    
+    
 
 keyboard = (ct.c_char * 32)()
 
 # Number of seconds to sleep between polling mouse position.
-SLEEPTIME = 0.05
+SLEEPTIME = 1.05
 
 def _main(display):
+    w=WorkingMeas()
     root = xlib.XDefaultRootWindow(display)
     mousex = c_int()
     mousey = c_int()
@@ -49,13 +92,16 @@ def _main(display):
     xlib.XQueryKeymap(display, keyboard)
     oldx=c_int(0)
     oldy=c_int(0)
+    
     while 1:
+        act=False
         keyboard2 = (ct.c_char * 32)()
         
         xlib.XQueryKeymap(display, keyboard2)
         for i in range(32):
           if (keyboard[i]!=keyboard2[i]):
-            print("not eq")
+#            print("not eq")
+            act=True
           keyboard[i]=keyboard2[i]
         
         
@@ -69,8 +115,10 @@ def _main(display):
         if mousex.value!=oldx or mousey.value!=oldy:
           oldx=mousex.value
           oldy=mousey.value
-          print("not eq")
+#          print("not eq")
+          act=True
         time.sleep(SLEEPTIME)
+        w.message(act)
 
 
 def main():
